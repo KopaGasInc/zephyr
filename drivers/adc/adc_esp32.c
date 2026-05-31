@@ -68,35 +68,27 @@ static inline int gain_to_atten(enum adc_gain gain, adc_atten_t *atten)
 #ifndef CONFIG_ADC_ESP32_DMA
 
 /* Convert voltage by inverted attenuation to support zephyr gain values */
-static void atten_to_gain(adc_atten_t atten, uint32_t *val_mv)
+static void atten_to_gain(adc_atten_t atten, uint32_t *num, uint32_t *den)
 {
-	uint32_t num, den;
-
-	if (!val_mv) {
-		return;
-	}
-
 	switch (atten) {
 	case ADC_ATTEN_DB_2_5: /* 1/ADC_GAIN_4_5 */
-		num = 4;
-		den = 5;
+		*num = 4;
+		*den = 5;
 		break;
 	case ADC_ATTEN_DB_6: /* 1/ADC_GAIN_1_2 */
-		num = 1;
-		den = 2;
+		*num = 1;
+		*den = 2;
 		break;
 	case ADC_ATTEN_DB_12: /* 1/ADC_GAIN_1_4 */
-		num = 1;
-		den = 4;
+		*num = 1;
+		*den = 4;
 		break;
 	case ADC_ATTEN_DB_0: /* 1/ADC_GAIN_1 */
 	default:
-		num = 1;
-		den = 1;
+		*num = 1;
+		*den = 1;
 		break;
 	}
-
-	*val_mv = (*val_mv * num) / den;
 }
 
 #endif /* CONFIG_ADC_ESP32_DMA */
@@ -180,7 +172,7 @@ static int adc_esp32_read(const struct device *dev, const struct adc_sequence *s
 
 			adc_cali_raw_to_voltage(data->cal_handle[channel_id], acq_raw, &acq_mv);
 
-			LOG_DBG("ADC acquisition [unit: %u, chan: %u, acq_raw: %u, acq_mv: %u]",
+			LOG_INF("ADC acquisition [unit: %u, chan: %u, acq_raw: %u, acq_mv: %u]",
 				data->hal.unit, channel_id, acq_raw, acq_mv);
 
 #if CONFIG_SOC_SERIES_ESP32
@@ -191,9 +183,14 @@ static int adc_esp32_read(const struct device *dev, const struct adc_sequence *s
 #endif /* CONFIG_SOC_SERIES_ESP32 */
 
 			/* Fit according to selected attenuation */
-			atten_to_gain(data->attenuation[channel_id], &acq_mv);
-			acq_raw = acq_mv * ((1 << data->resolution[channel_id]) - 1) /
-				  data->meas_ref_internal;
+			uint32_t gain_num, gain_den;
+
+			atten_to_gain(data->attenuation[channel_id], &gain_num, &gain_den);
+			acq_raw = acq_mv * gain_num * ((1 << data->resolution[channel_id]) - 1) /
+				  (gain_den * data->meas_ref_internal);
+            LOG_INF("ADC atten_to_gain [unit: %u, chan: %u, acq_raw: %u, acq_mv: %u]",
+				data->hal.unit, channel_id, acq_raw, acq_mv);
+
 		} else {
 			LOG_WRN("ADC reading is uncompensated");
 		}
