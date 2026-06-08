@@ -421,7 +421,7 @@ static int adc_esp32_read(const struct device *dev, const struct adc_sequence *s
 
 			adc_cali_raw_to_voltage(data->cal_handle[channel_id], acq_raw, &acq_mv);
 
-			LOG_INF("ADC acquisition [unit: %u, chan: %u, acq_raw: %u, acq_mv: %u]",
+			LOG_DBG("ADC acquisition [unit: %u, chan: %u, acq_raw: %u, acq_mv: %u]",
 				data->hal.unit, channel_id, acq_raw, acq_mv);
 
 #if CONFIG_SOC_SERIES_ESP32
@@ -438,7 +438,7 @@ static int adc_esp32_read(const struct device *dev, const struct adc_sequence *s
 			atten_to_gain(data->attenuation[channel_id], &gain_num, &gain_den);
 			acq_raw = acq_mv * gain_num * ((1 << data->resolution[channel_id]) - 1) /
 				  (gain_den * data->meas_ref_internal);
-            LOG_INF("ADC atten_to_gain [unit: %u, chan: %u, acq_raw: %u, acq_mv: %u]",
+            LOG_DBG("ADC atten_to_gain [unit: %u, chan: %u, acq_raw: %u, acq_mv: %u]",
 				data->hal.unit, channel_id, acq_raw, acq_mv);
 
 		} else {
